@@ -1,0 +1,4 @@
+pydantic==1.10.7
+paramiko==3.1.0
+httpx==0.23.3
+python-dotenv==1.0.0
