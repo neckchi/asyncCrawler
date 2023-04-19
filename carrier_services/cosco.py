@@ -2,7 +2,8 @@ from crawler_modal.async_crawler import *
 from schemas.service_loops import Services
 from urllib.parse import urlparse
 from carrier_services.helpers import order_counter
-from logger_factory.logger import  LoggerFactory
+from logger_factory.logger import LoggerFactory
+from schemas import settings
 import concurrent.futures
 import functools
 import uuid
@@ -11,8 +12,8 @@ import time
 import os
 import csv
 
-
 logger = LoggerFactory.get_logger(__name__, log_level="INFO")
+
 
 def cosco_mapping(crawler_result: list, writer: csv.DictWriter):
     # File Operation IO tasks - sort out the file,do mapping based on csv schemas
@@ -78,10 +79,10 @@ async def cosco_crawler():
             service_groups = Crawler(
                 client=client,
                 sleep=None,
-                urls=["https://lines.coscoshipping.com/homeapi/routeService/ServiceLoopGroup/{}.do".format(i) for i in
+                urls=[settings.cosu_service_url.format(i) for i in
                       range(11, 19)],
                 workers=5,
-                limit=5000,
+                limit=25,
             )
             await service_groups.run()
             service_groups_result = [{data.get('serLpGroupUuid'): data.get('serLpGroupNameEn')} for service_group in
@@ -99,12 +100,11 @@ async def cosco_crawler():
             route_services = Crawler(
                 client=client,
                 sleep=None,
-                urls=[
-                    "https://lines.coscoshipping.com/homeapi/routeService/routeService/{}.do".format(
-                        next(iter(rs.keys())))
+                urls=[settings.cosu_route_url.format(
+                    next(iter(rs.keys())))
                     for rs in service_groups_result],
                 workers=5,
-                limit=5000,
+                limit=25,
             )
             await route_services.run()
 
@@ -123,11 +123,10 @@ async def cosco_crawler():
             call_ports = Crawler(
                 client=client,
                 sleep=None,
-                urls=[
-                    "https://lines.coscoshipping.com/homeapi/routeService/callPort/{}.do".format(next(iter(cp.keys())))
-                    for cp in route_services_result],
+                urls=[settings.cosu_ports_url.format(next(iter(cp.keys())))
+                      for cp in route_services_result],
                 workers=5,
-                limit=5000,
+                limit=25,
             )
             await call_ports.run()
 

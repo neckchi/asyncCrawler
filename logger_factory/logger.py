@@ -1,5 +1,7 @@
-import logging,os
+import logging
+import os
 from datetime import datetime
+
 
 class LoggerFactory(object):
     _LOG = None
@@ -14,9 +16,10 @@ class LoggerFactory(object):
         log_format = "%(asctime)s:%(levelname)s:%(message)s"
 
         # Initialize the class variable with logger object
-        log_file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'../logger_factory/logs/cosco_service_loop_{datetime.now().strftime("%Y%m%d")}.log')
+        log_file_name = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                     f'../logger_factory/logs/cosco_service_loop_{datetime.now().strftime("%Y%m%d")}.log')
         LoggerFactory._LOG = logging.getLogger(log_file)
-        logging.basicConfig(filename=log_file_name,level=logging.INFO, format=log_format, datefmt="%Y-%m-%d %H:%M:%S")
+        logging.basicConfig(filename=log_file_name, level=logging.INFO, format=log_format, datefmt="%Y-%m-%d %H:%M:%S")
         # set the logging level based on the user selection
         if log_level == "INFO":
             LoggerFactory._LOG.setLevel(logging.INFO)

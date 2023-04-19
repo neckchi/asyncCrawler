@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     mft_server: SecretStr
     mft_user: SecretStr
     mft_password: SecretStr
+    cosu_service_url:str
+    cosu_route_url:str
+    cosu_ports_url:str
 
     class Config:
         env_file = ".env"
