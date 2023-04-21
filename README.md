@@ -6,7 +6,7 @@ Generate **Service Loops** for carrier services.
 
 1. Fetch Service Loop From Carrier APIs/Webpage
 ```
-There are Private/Public APIs/Webpages using for grabbing the service loop from Cosco
+There are Private/Public APIs/Webpages using for grabbing the service loop from Carriers
 ```
 2.  Convert it to P44 Format
 
