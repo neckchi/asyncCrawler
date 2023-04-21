@@ -3,6 +3,7 @@ from schemas.service_loops import Services
 from urllib.parse import urlparse
 from carrier_services.helpers import order_counter
 from logger_factory.logger import LoggerFactory
+from mft_connections.sftp_connections import Sftp
 from schemas import settings
 import concurrent.futures
 import functools
@@ -11,10 +12,9 @@ import json
 import time
 import os
 import csv
+import datetime
 
 logger = LoggerFactory.get_logger(__name__, log_level="INFO")
-
-
 def cosco_mapping(crawler_result: list, writer: csv.DictWriter):
     # File Operation IO tasks - sort out the file,do mapping based on csv schemas
     direction_lookup: dict = {'N': 'NORTHBOUND', 'S': 'SOUTHBOUND', 'E': 'EASTBOUND',
@@ -63,6 +63,7 @@ def cosco_mapping(crawler_result: list, writer: csv.DictWriter):
                     writer.writerow(pod.dict())
 
 
+
 async def cosco_crawler():
     loop = asyncio.get_running_loop()
     start = time.perf_counter()
@@ -82,7 +83,7 @@ async def cosco_crawler():
                 urls=[settings.cosu_service_url.format(i) for i in
                       range(11, 19)],
                 workers=5,
-                limit=25,
+                limit=5000,
             )
             await service_groups.run()
             service_groups_result = [{data.get('serLpGroupUuid'): data.get('serLpGroupNameEn')} for service_group in
@@ -104,7 +105,7 @@ async def cosco_crawler():
                     next(iter(rs.keys())))
                     for rs in service_groups_result],
                 workers=5,
-                limit=25,
+                limit=5000,
             )
             await route_services.run()
 
@@ -126,7 +127,7 @@ async def cosco_crawler():
                 urls=[settings.cosu_ports_url.format(next(iter(cp.keys())))
                       for cp in route_services_result],
                 workers=5,
-                limit=25,
+                limit=5000,
             )
             await call_ports.run()
 
@@ -144,5 +145,26 @@ async def cosco_crawler():
             logger.info(f"Anything pending?: {result}")
         end = time.perf_counter()
         logger.info(f"Done in {end - start:.2f}s")
+
+    # Connect KN SFTP
+    sftp = Sftp(
+        hostname=settings.mft_server.get_secret_value(),
+        username=settings.mft_user.get_secret_value(),
+        password=settings.mft_password.get_secret_value()
+    )
+    sftp.connect()
+    # Upload the service loop
+    today: datetime = datetime.datetime.now()
+    timestamp: datetime = today.strftime("%Y%m%dT%H%M%S%f")
+    local_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cosco_services\cosco_port_rotation.csv')
+    target_path = '/pub/inbound/services/cosu'
+    target_file = f'cosco_services_{timestamp}.csv'
+    try:
+        sftp.upload(source_local_path=local_file,remote_path=target_path,file_name=target_file)
+    except IOError:
+        pass
+    finally:
+    # Disconnect KN SFTP
+        sftp.disconnect()
 
 # asyncio.run(cosco(), debug=True)

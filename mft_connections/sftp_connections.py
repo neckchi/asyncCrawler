@@ -1,4 +1,7 @@
-import paramiko,logging
+import paramiko
+import logging
+
+
 class Sftp:
     def __init__(self, hostname, username, password, port=22):
         self.transport = None
