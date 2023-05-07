@@ -14,12 +14,13 @@ import os
 import csv
 import datetime
 
+carrier: str = 'cosu'
 logger = LoggerFactory.get_logger(__name__, log_level="INFO")
 def cosco_mapping(crawler_result: list, writer: csv.DictWriter):
     # File Operation IO tasks - sort out the file,do mapping based on csv schemas
     direction_lookup: dict = {'N': 'NORTHBOUND', 'S': 'SOUTHBOUND', 'E': 'EASTBOUND',
                               'W': 'WESTBOUND'}
-    carrier: str = 'COSU'
+
     for call_port in crawler_result:
         service_code: str = urlparse(str(call_port.url)).path[31:].split('.do')[0]
         for data in json.loads(call_port.read())['data']['content']:
@@ -37,18 +38,17 @@ def cosco_mapping(crawler_result: list, writer: csv.DictWriter):
                     ports.get('callPortEtaTime')).isnumeric() else ports.get('callPortEta')
                 common: dict = {'changeMode': None, 'allianceID': None, 'alliancePoolID': None,
                                 'tradeID': None,
-                                'oiServiceID': ''.join([service_code, carrier]),
-                                'carrierID': carrier,
+                                'oiServiceID': ''.join([service_code, carrier.upper()]),
+                                'carrierID': carrier.upper(),
                                 'serviceID': service_code + ' ' + ''.join(['[', direction_code, ']']),
                                 'service': service_code,
                                 'direction': direction,
                                 'frequency': 'WEEKLY',
                                 'portCode': port_name,
-                                'relatedID': uuid.uuid5(uuid.NAMESPACE_DNS, f'{carrier}-{service_code}-{direction}')}
+                                'relatedID': uuid.uuid5(uuid.NAMESPACE_DNS, f'{carrier.upper()}-{service_code}-{direction}')}
                 if ports.get('callPortEtaTime') is not None:
                     pol: Services = Services(**common,
-                                             startDay=eta_day.replace('TEU', 'THU').replace('WES', 'WED').replace(
-                                                 'NONE', etd_day),
+                                             startDay=eta_day.replace('TEU', 'THU').replace('WES', 'WED').replace('NONE', etd_day),
                                              tt=eta_time,
                                              order=order_counter(port_sequence, 'L'),
                                              locationType='L')
@@ -131,7 +131,7 @@ async def cosco_crawler():
             )
             await call_ports.run()
 
-            # Using additional thread to speed up the entire processing for blockingIO task
+            # Using additional thread to speed up the entire processing for FileOperationIO task
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 result = await loop.run_in_executor(
                     pool, functools.partial(cosco_mapping, crawler_result=call_ports.result, writer=writer))
@@ -157,8 +157,8 @@ async def cosco_crawler():
     today: datetime = datetime.datetime.now()
     timestamp: datetime = today.strftime("%Y%m%dT%H%M%S%f")
     local_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cosco_services\cosco_port_rotation.csv')
-    target_path = '/pub/inbound/services/cosu'
-    target_file = f'cosco_services_{timestamp}.csv'
+    target_path = f'/pub/inbound/services/{carrier}'
+    target_file = f'{carrier}_services_{timestamp}.csv'
     try:
         sftp.upload(source_local_path=local_file,remote_path=target_path,file_name=target_file)
     except IOError:
