@@ -1,6 +1,6 @@
 import paramiko
 import logging
-
+import time
 
 class Sftp:
     def __init__(self, hostname, username, password, port=22):
@@ -34,19 +34,25 @@ class Sftp:
         """
         Uploads the source files from local to the sftp server.
         """
-        try:
-            self.connection.chdir(remote_path)  # Test if remote_path exists
-            logging.info('cd working directory')
-        except IOError:
-            self.connection.mkdir(remote_path)  # Create remote_path
-            self.connection.chdir(remote_path)
-            logging.info('cd working directory')
-        finally:
-            logging.info(
-                f"uploading to {self.hostname} as {self.username} [(remote path: {remote_path});(file name:{file_name})(source local path: {source_local_path})]"
-            )
+        while (retries := 10) > 0:
+            try:
+                self.connection.chdir(remote_path)  # Test if remote_path exists
+                logging.info('cd working directory')
+                break
+            except IOError:
+                self.connection.mkdir(remote_path)  # Create remote_path
+                self.connection.chdir(remote_path)
+                logging.info('cd working directory')
+                time.sleep(3)
+                retries -= 1
+            finally:
+                logging.info(
+                    f"uploading to {self.hostname} as {self.username} [(remote path: {remote_path});(file name:{file_name})(source local path: {source_local_path})]"
+                )
 
-            # Download file from SFTP
-            self.connection.put(source_local_path,file_name)
-            logging.info("upload completed")
+                # Download file from SFTP
+                self.connection.put(source_local_path,file_name)
+                logging.info("upload completed")
 
+        if retries == 0:
+            raise PermissionError

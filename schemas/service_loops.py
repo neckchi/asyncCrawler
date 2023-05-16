@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     cosu_service_url:str
     cosu_route_url:str
     cosu_ports_url:str
+    eglv_service_url:str
+    eglv_route_url:str
+    ymlu_service_url:str
+    ymlu_route_url:str
 
     class Config:
         env_file = ".env"
