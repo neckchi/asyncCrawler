@@ -74,6 +74,7 @@ class Crawler():
         if retries == 0:
             raise PermissionError
         else:
+
             self.todo.task_done()
 
     async def crawl(self, url: str):
@@ -90,19 +91,17 @@ class Crawler():
             parsed_url  = urlparse(url)
             based_url = f'{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}'
             body_data:dict|None = {key: value[0] for key,value in parse_qs(parsed_url.query).items()} if parsed_url.query else None
-            response = await self.client.post(url=based_url,headers=headers.update(self.specific_headers) if self.specific_headers is not None else headers,data = body_data,follow_redirects=True)
+            response = await self.client.post(url=based_url,headers=headers.update(self.specific_headers) if self.specific_headers is not None else headers,json = body_data,follow_redirects=True)
 
-        found_links = await self.parse_links(base_url=str(response.url), response=response)
+        found_links = await self.parse_links(response=response)
         await self.on_found_links(found_links)
         self.done.append(url)
 
-    async def parse_links(self, base_url: str, response: httpx.Response) -> set[str]:
+    async def parse_links(self, response: httpx.Response) -> set[str]:
         if self.type == 'API':
-            self.found_links.add(base_url)
             self.result.append(response)
         else:
             soup = BeautifulSoup(response.text,'html.parser')
-            self.found_links.add(base_url)
             parsed_soup = soup.findAll(self.parent_element, class_=self.html_class) if self.html_class else soup.findAll(self.parent_element, id=self.html_id)
             if self.element =='ahref':
                 for service in parsed_soup:
@@ -116,6 +115,7 @@ class Crawler():
 
     async def on_found_links(self, urls: set[str]):
         new = urls - self.seen
+
         self.seen.update(new)
         # await save to database or file here...
         for url in new:
