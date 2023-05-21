@@ -1,11 +1,11 @@
-from crawler_modal.async_crawler import *
-from crawler_modal.csv_operation import FileManager
-from schemas.service_loops import Services
+from src.main.crawler_modal.async_crawler import *
+from src.main.crawler_modal.csv_operation import FileManager
+from src.main.schemas.service_loops import Services
 from urllib.parse import urlparse
-from carrier_services.helpers import order_counter
-from logger_factory.logger import LoggerFactory
-from mft_connections.sftp_connections import Sftp
-from schemas import settings
+from src.main.carrier_services.helpers import order_counter
+from src.main.logger_factory.logger import LoggerFactory
+from src.main.mft_connections.sftp_connections import Sftp
+from src.main.schemas import settings
 import concurrent.futures
 import functools
 import uuid

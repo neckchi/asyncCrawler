@@ -1,9 +1,9 @@
-from crawler_modal.async_crawler import *
-from crawler_modal.csv_operation import FileManager
-from schemas.service_loops import Services
-from logger_factory.logger import LoggerFactory
-from carrier_services.helpers import order_counter
-from schemas import settings
+from src.main.crawler_modal.async_crawler import *
+from src.main.crawler_modal.csv_operation import FileManager
+from src.main.schemas.service_loops import Services
+from src.main.logger_factory.logger import LoggerFactory
+from src.main.carrier_services.helpers import order_counter
+from src.main.schemas import settings
 import time
 import itertools
 import csv

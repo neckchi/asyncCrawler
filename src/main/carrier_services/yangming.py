@@ -1,9 +1,9 @@
-from crawler_modal.async_crawler import *
-from crawler_modal.csv_operation import FileManager
-from schemas import settings
-from schemas.service_loops import Services
-from logger_factory.logger import LoggerFactory
-from carrier_services.helpers import order_counter
+from src.main.crawler_modal.async_crawler import *
+from src.main.crawler_modal.csv_operation import FileManager
+from src.main.schemas import settings
+from src.main.schemas.service_loops import Services
+from src.main.logger_factory.logger import LoggerFactory
+from src.main.carrier_services.helpers import order_counter
 import asyncio
 import re
 import itertools
@@ -97,7 +97,7 @@ async def yangming_crawler():
             sleep=5,
             urls=service_direction_url,
             workers=5,
-            limit=100,
+            limit=10,
         )
 
         await service_routing.run()

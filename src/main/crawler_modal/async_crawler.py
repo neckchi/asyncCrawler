@@ -1,19 +1,34 @@
 from typing import Callable, Iterable
 from bs4 import BeautifulSoup
+from random import randint
+from src.main.crawler_modal import browser_headers
+from urllib.parse import urlparse,parse_qs
 import asyncio
 import httpx
 
 
+
 class Crawler():
-    def __init__(self,crawler_type:str, urls: Iterable[str],parent_element:str|None = None,html_class:list|None= None,
+    #Generate random user agent
+    def get_random_header(header_list:list[dict]):
+        random_index = randint(0, len(header_list) - 1)
+        return header_list[random_index]
+
+    def __init__(self,crawler_type:str , urls: Iterable[str],method:str ='GET',
+                 specific_headers: dict | None = None,
+                 parent_element:str|None = None,html_class:list|None= None,
                  html_id:list|None= None,next_element:str |None = None,
-                 filter_url: Callable[[str, str], str | None] = None, sleep: int = None, workers: int = 10,
+                 filter_url: Callable[[str, str], str | None] = None,
+                 sleep: int = None,
+                 workers: int = 10,
                  limit: int = 25,):
+
         timeout = httpx.Timeout(50.0, read=None, connect=60.0)
         limits = httpx.Limits(max_keepalive_connections=60, max_connections=None)
+        self.type: str = crawler_type
+        self.specific_headers:dict|None = specific_headers
         self.client: httpx.AsyncClient = httpx.AsyncClient(verify=False, timeout=timeout, limits=limits)
-        # self.loop = asyncio.get_event_loop()
-        self.type:str = crawler_type
+        self.method:str = method
         self.parent_element:str = parent_element
         self.html_class:list = html_class
         self.html_id:list = html_id
@@ -48,8 +63,8 @@ class Crawler():
 
     async def process(self):
         url = await self.todo.get()
-        # retry 20 times
-        while (retries := 20) > 0:
+        # retry 10 times
+        while (retries := 10) > 0:
             try:
                 await self.crawl(url)
                 break
@@ -62,12 +77,21 @@ class Crawler():
             self.todo.task_done()
 
     async def crawl(self, url: str):
+        headers:dict = Crawler.get_random_header(header_list=browser_headers.headers_list)
         # rate limit here...many website will auto ban IP address if they detect too many connection and too fast
         if self.sleep_dllm is None:
             pass
         else:
             await asyncio.sleep(self.sleep_dllm)
-        response = await self.client.get(url=url,follow_redirects=True)
+
+        if self.method == 'GET':
+            response = await self.client.get(url=url,headers=headers.update(self.specific_headers) if self.specific_headers is not None else headers,follow_redirects=True)
+        else:
+            parsed_url  = urlparse(url)
+            based_url = f'{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}'
+            body_data:dict|None = {key: value[0] for key,value in parse_qs(parsed_url.query).items()} if parsed_url.query else None
+            response = await self.client.post(url=based_url,headers=headers.update(self.specific_headers) if self.specific_headers is not None else headers,data = body_data,follow_redirects=True)
+
         found_links = await self.parse_links(base_url=str(response.url), response=response)
         await self.on_found_links(found_links)
         self.done.append(url)

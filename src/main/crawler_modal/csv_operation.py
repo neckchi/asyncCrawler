@@ -1,8 +1,6 @@
 import csv
 import os
-from schemas.service_loops import Services
-
-
+from src.main.schemas.service_loops import Services
 
 class FileManager:
     def __init__(self,mode,scac):

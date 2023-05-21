@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     eglv_route_url:str
     ymlu_service_url:str
     ymlu_route_url:str
+    hdmu_service_url:str
+    hdmu_route_url:str
 
     class Config:
         env_file = ".env"
