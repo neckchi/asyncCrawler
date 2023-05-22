@@ -86,18 +86,19 @@ class Crawler():
             await asyncio.sleep(self.sleep_dllm)
 
         if self.method == 'GET':
-            response = await self.client.get(url=url,headers=headers.update(self.specific_headers) if self.specific_headers is not None else headers,follow_redirects=True)
+            response = await self.client.get(url=url,headers=dict(headers,**self.specific_headers) if self.specific_headers is not None else headers,follow_redirects=True)
         else:
             parsed_url  = urlparse(url)
-            based_url = f'{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}'
+            base_url = f'{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}'
             body_data:dict|None = {key: value[0] for key,value in parse_qs(parsed_url.query).items()} if parsed_url.query else None
-            response = await self.client.post(url=based_url,headers=headers.update(self.specific_headers) if self.specific_headers is not None else headers,json = body_data,follow_redirects=True)
-
-        found_links = await self.parse_links(response=response)
+            print(base_url)
+            print(body_data)
+            response = await self.client.post(url=base_url,headers=dict(headers,**self.specific_headers)  if self.specific_headers is not None else headers,json = body_data,follow_redirects=True)
+        found_links = await self.parse_links(base_url=url,response=response)
         await self.on_found_links(found_links)
         self.done.append(url)
 
-    async def parse_links(self, response: httpx.Response) -> set[str]:
+    async def parse_links(self, base_url: str, response: httpx.Response) -> set[str]:
         if self.type == 'API':
             self.result.append(response)
         else:
@@ -110,12 +111,12 @@ class Crawler():
             elif self.element in ('td','option'):
                 self.result.append([service.text.strip() for service in parsed_soup if '-----' not in service.text])
             else:self.result.append(parsed_soup)
+        self.found_links.add(base_url)
         return self.found_links
 
 
     async def on_found_links(self, urls: set[str]):
         new = urls - self.seen
-
         self.seen.update(new)
         # await save to database or file here...
         for url in new:
