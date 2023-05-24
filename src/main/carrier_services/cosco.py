@@ -11,9 +11,7 @@ import functools
 import uuid
 import json
 import time
-import os
 import csv
-import datetime
 
 carrier: str = 'cosu'
 logger = LoggerFactory.get_logger(__name__, log_level="INFO")
@@ -54,8 +52,7 @@ def cosco_mapping(crawler_result: list, writer: csv.DictWriter):
                     writer.writerow(pol.dict())
                 if ports.get('callPortEtdTime') is not None:
                     pod: Services = Services(**common,
-                                             startDay=etd_day.replace('TEU', 'THU').replace('WES', 'WED').replace(
-                                                 'NONE', eta_day),
+                                             startDay=etd_day.replace('TEU', 'THU').replace('WES', 'WED').replace('NONE', eta_day),
                                              tt=etd_time,
                                              order=order_counter(port_sequence, 'D'),
                                              locationType='D')
@@ -72,10 +69,9 @@ async def cosco_crawler():
         service_groups = Crawler(
             crawler_type='API',
             sleep=None,
-            urls=[settings.cosu_service_url.format(i) for i in
-                  range(11, 19)],
+            urls=[settings.cosu_service_url.format(i) for i in range(11, 19)],
             workers=5,
-            limit=5000,
+            limit=100,
         )
         await service_groups.run()
         service_groups_result = [{data.get('serLpGroupUuid'): data.get('serLpGroupNameEn')} for service_group in
@@ -92,12 +88,12 @@ async def cosco_crawler():
         # COSCO Route Services
         route_services = Crawler(
             crawler_type='API',
-            sleep=None,
+            # sleep=4,
             urls=[settings.cosu_route_url.format(
                 next(iter(rs.keys())))
                 for rs in service_groups_result],
             workers=5,
-            limit=5000,
+            limit=100,
         )
         await route_services.run()
 
@@ -115,13 +111,29 @@ async def cosco_crawler():
         # COSCO CALL PORTS
         call_ports = Crawler(
             crawler_type='API',
-            sleep=None,
+            # sleep=4,
             urls=[settings.cosu_ports_url.format(next(iter(cp.keys())))
                   for cp in route_services_result],
             workers=5,
-            limit=5000,
+            limit=10,
         )
         await call_ports.run()
+
+        # ports:set = set([str(dict(ports).get('callPort')).upper().replace(' ', '').split('(',1)[0] for call_port in call_ports.result for data in json.loads(call_port.read())['data']['content'] for  ports in data['ports']])
+        #
+        # #COSCO CALL UNLOCATION
+        # call_unloc_code = Crawler(
+        #     crawler_type='API',
+        #     # sleep=4,
+        #     urls=[settings.cosu_unloc_url.format(port=port_name) for port_name in ports],
+        #     workers=5,
+        #     limit=5000,
+        # )
+        # await call_unloc_code.run()
+        # un_loc_name:list = [str(call_unloc_url).split('findCityDistrictByPrefix?prefix=',1)[1] for call_unloc_url in call_unloc_code.done]
+        # test = [data['unloCode'] for unloc in call_unloc_code.result for data in json.loads(unloc.read())['data']['content']]
+        # print(un_loc_name)
+        # print(test)
 
         # Using additional thread to speed up the entire processing for FileOperationIO task
         with concurrent.futures.ThreadPoolExecutor() as pool:
@@ -138,25 +150,25 @@ async def cosco_crawler():
         end = time.perf_counter()
         logger.info(f"Done in {end - start:.2f}s")
 
-    # Connect KN SFTP
-    sftp = Sftp(
-        hostname=settings.mft_server.get_secret_value(),
-        username=settings.mft_user.get_secret_value(),
-        password=settings.mft_password.get_secret_value()
-    )
-    sftp.connect()
-    # Upload the service loop
-    today: datetime = datetime.datetime.now()
-    timestamp: datetime = today.strftime("%Y%m%dT%H%M%S%f")
-    local_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cosco_services\cosco_port_rotation.csv')
-    target_path = f'/pub/inbound/services/{carrier}'
-    target_file = f'{carrier}_services_{timestamp}.csv'
-    try:
-        sftp.upload(source_local_path=local_file,remote_path=target_path,file_name=target_file)
-    except IOError:
-        pass
-    finally:
-    # Disconnect KN SFTP
-        sftp.disconnect()
+    # # Connect KN SFTP
+    # sftp = Sftp(
+    #     hostname=settings.mft_server.get_secret_value(),
+    #     username=settings.mft_user.get_secret_value(),
+    #     password=settings.mft_password.get_secret_value()
+    # )
+    # sftp.connect()
+    # # Upload the service loop
+    # today: datetime = datetime.datetime.now()
+    # timestamp: datetime = today.strftime("%Y%m%dT%H%M%S%f")
+    # local_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cosco_services\cosco_port_rotation.csv')
+    # target_path = f'/pub/inbound/services/{carrier}'
+    # target_file = f'{carrier}_services_{timestamp}.csv'
+    # try:
+    #     sftp.upload(source_local_path=local_file,remote_path=target_path,file_name=target_file)
+    # except IOError:
+    #     pass
+    # finally:
+    # # Disconnect KN SFTP
+    #     sftp.disconnect()
 
 # asyncio.run(cosco(), debug=True)

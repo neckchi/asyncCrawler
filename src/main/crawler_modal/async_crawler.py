@@ -91,8 +91,6 @@ class Crawler():
             parsed_url  = urlparse(url)
             base_url = f'{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}'
             body_data:dict|None = {key: value[0] for key,value in parse_qs(parsed_url.query).items()} if parsed_url.query else None
-            print(base_url)
-            print(body_data)
             response = await self.client.post(url=base_url,headers=dict(headers,**self.specific_headers)  if self.specific_headers is not None else headers,json = body_data,follow_redirects=True)
         found_links = await self.parse_links(base_url=url,response=response)
         await self.on_found_links(found_links)

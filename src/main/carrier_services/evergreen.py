@@ -88,9 +88,9 @@ async def evergreen_crawler():
             html_class=["f09tilb1", "f09rown2"],
             next_element='td',
             urls=[settings.eglv_route_url.format(result) for result in network_results],
-            sleep=5,
+            sleep=4,
             workers=5,
-            limit=100,
+            limit=10,
         )
         await service_routing.run()
 

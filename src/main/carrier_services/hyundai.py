@@ -1,7 +1,7 @@
 from src.main.crawler_modal.async_crawler import *
 from src.main.logger_factory.logger import LoggerFactory
 from src.main.schemas.service_loops import Services
-from src.main.carrier_services.helpers import order_counter
+from src.main.carrier_services.helpers import order_counter,split_list_of_dicts
 from src.main.crawler_modal.csv_operation import FileManager
 from src.main.schemas import settings
 from datetime import datetime,timedelta
@@ -15,16 +15,6 @@ import csv
 
 carrier: str = 'hdmu'
 logger = LoggerFactory.get_logger(__name__, log_level="INFO")
-def split_list_of_dicts(lst:list, key:str) -> dict[list]:
-    result:dict={}
-    for d in lst:
-        value:dict = d.get(key)
-        if value in result:
-            result[value].append(d)
-        else:
-            result[value] = [d]
-    return result
-
 
 def find_dictionaries_by_values(lst:list,key:str,value:str) ->dict:
     result:list = []
@@ -36,43 +26,43 @@ def find_dictionaries_by_values(lst:list,key:str,value:str) ->dict:
     return result[-1]
 
 def hyundai_mapping(crawler_result: list,network_results:list, writer: csv.DictWriter):
-    print(network_results)
-    print(crawler_result)
+
     for service_url, service_route in zip(network_results, crawler_result):
         direction_lookup: dict = {'N': 'NORTHBOUND', 'S': 'SOUTHBOUND', 'E': 'EASTBOUND', 'W': 'WESTBOUND'}
         service_code: str = str(service_url).split('srchByLoopOptLoop=', 1)[1][:3]
-        route: list = json.loads(service_route.text)['hdrList']
-        vessel_voyage: list = json.loads(service_route.text)['vskSkdDtls']
-        route_with_direction = split_list_of_dicts(route, 'skdDirCd')
-        for key, value in route_with_direction.items():
-            direction_code = key
-            direction = direction_lookup.get(direction_code, 'UNKNOWN')
-            for port_sequence, port_route in enumerate(value):
-                port_code = port_route.get('portCd')
-                common: dict = {'changeMode': None, 'allianceID': None, 'alliancePoolID': None,
-                                'tradeID': None,
-                                'oiServiceID': ''.join([service_code, carrier.upper()]),
-                                'carrierID': carrier.upper(),
-                                'serviceID': service_code + ' ' + ''.join(['[', direction_code, ']']),
-                                'service': service_code,
-                                'direction': direction,
-                                'frequency': 'WEEKLY',
-                                'portCode': port_code,
-                                'relatedID': uuid.uuid5(uuid.NAMESPACE_DNS,
-                                                        f'{carrier.upper()}-{service_code}-{direction}')}
-                match_result = find_dictionaries_by_values(vessel_voyage, 'portCd', port_code)
-                pol: Services = Services(**common,
-                                         startDay=match_result['eta'].upper(),
-                                         tt=0,
-                                         order=order_counter(port_sequence, 'L'),
-                                         locationType='L')
-                writer.writerow(pol.dict())
-                pod: Services = Services(**common,
-                                         startDay=match_result['etd'].upper(),
-                                         tt=0,
-                                         order=order_counter(port_sequence, 'D'),
-                                         locationType='D')
-                writer.writerow(pod.dict())
+        vessel_voyage = json.loads(service_route.text).get('vskSkdDtls')
+        if vessel_voyage:
+            route: list = json.loads(service_route.text)['hdrList']
+            route_with_direction = split_list_of_dicts(route, 'skdDirCd')
+            for key, value in route_with_direction.items():
+                direction_code = key
+                direction = direction_lookup.get(direction_code, 'UNKNOWN')
+                for port_sequence, port_route in enumerate(value):
+                    port_code = port_route.get('portCd')
+                    common: dict = {'changeMode': None, 'allianceID': None, 'alliancePoolID': None,
+                                    'tradeID': None,
+                                    'oiServiceID': ''.join([service_code, carrier.upper()]),
+                                    'carrierID': carrier.upper(),
+                                    'serviceID': service_code + ' ' + ''.join(['[', direction_code, ']']),
+                                    'service': service_code,
+                                    'direction': direction,
+                                    'frequency': 'WEEKLY',
+                                    'portCode': port_code,
+                                    'relatedID': uuid.uuid5(uuid.NAMESPACE_DNS,
+                                                            f'{carrier.upper()}-{service_code}-{direction}')}
+                    match_result = find_dictionaries_by_values(vessel_voyage, 'portCd', port_code)
+                    pol: Services = Services(**common,
+                                             startDay=match_result['eta'].upper(),
+                                             tt=0,
+                                             order=order_counter(port_sequence, 'L'),
+                                             locationType='L')
+                    writer.writerow(pol.dict())
+                    pod: Services = Services(**common,
+                                             startDay=match_result['etd'].upper(),
+                                             tt=0,
+                                             order=order_counter(port_sequence, 'D'),
+                                             locationType='D')
+                    writer.writerow(pod.dict())
 
 async def hyundai_crawler():
     loop = asyncio.get_running_loop()
@@ -87,7 +77,7 @@ async def hyundai_crawler():
             limit=5000,
         )
         await service_network.run()
-        service_network_result:list = [str(data.get('optNm')) .split('[')[1][:3]for service_group in service_network.result for data in json.loads(service_group.text)['RTN_JSON3']][:2]
+        service_network_result:list = [str(data.get('optNm')) .split('[')[1][:3]for service_group in service_network.result for data in json.loads(service_group.text)['RTN_JSON3']]
         now:datetime = datetime.now()
         date_from: str = now.strftime("%Y%m%d")
         date_to:str = (now + timedelta(days= 120)).strftime("%Y%m%d")
@@ -106,7 +96,7 @@ async def hyundai_crawler():
             sleep=4,
             urls=service_routing_url,
             workers=5,
-            limit=5000,
+            limit=10,
         )
         await service_routing.run()
 
