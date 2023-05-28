@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     cosu_ports_url:str
     cosu_unloc_url:str
     eglv_service_url:str
+    eglv_location_url:str
     eglv_route_url:str
     ymlu_service_url:str
     ymlu_route_url:str

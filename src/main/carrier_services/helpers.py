@@ -1,10 +1,15 @@
+from functools import lru_cache
+from fuzzywuzzy import process
+from src.main import location_dict
 import os
+
+
+
 
 this_folder = os.path.dirname(os.path.abspath(__file__))
 
-def find_dictionaries_by_value(lst:list,key:str,value:str):
+def find_dictionaries_by_value(lst:list,key:str,value:str) :
     return [d for d in lst if d.get(key) == value]
-
 
 def split_list_of_dicts(lst:list, key:str) -> dict[list]:
     result:dict={}
@@ -30,3 +35,15 @@ def location_lookup(location: str) :
         dict_loc_code: dict = {k: v for k, v in (map(str, line.split(";")) for line in unloc)}
         port_code: str = str(dict_loc_code.get(location)).strip()
     yield port_code
+
+
+
+@lru_cache
+def find_closest_location_code(query:str) -> str:
+    match = process.extractOne(query.title(), location_dict.location_dictionaries.keys())
+    return location_dict.location_dictionaries[match[0]]
+
+
+
+
+
