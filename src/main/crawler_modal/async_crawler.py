@@ -33,7 +33,7 @@ class Crawler():
         self.html_class:list = html_class
         self.html_id:list = html_id
         self.element:str|None = next_element
-        self.sleep_dllm = sleep
+        self.sleep_dllm:int = sleep
         self.start_urls: set = set(urls)
         self.todo: asyncio.Queue = asyncio.Queue()
         self.found_links: set = set()
@@ -41,7 +41,7 @@ class Crawler():
         self.done: list = list()
         self.result: list = list()
         self.filter_url = filter_url
-        self.num_workers = workers
+        self.num_workers:int = workers
         self.limit: int = limit
         self.total: int = 0
 

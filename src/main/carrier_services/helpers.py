@@ -1,9 +1,7 @@
-from functools import lru_cache
-from fuzzywuzzy import process
-from src.main import location_dict
+from functools import cache
+from thefuzz import process
+from src.main import location_mapping
 import os
-
-
 
 
 this_folder = os.path.dirname(os.path.abspath(__file__))
@@ -22,6 +20,8 @@ def split_list_of_dicts(lst:list, key:str) -> dict[list]:
     return result
 
 #Generate Order Sequence Number
+
+@cache
 def order_counter(i,type:str)->int:
     if type =='L':
         i = i * 2
@@ -29,19 +29,10 @@ def order_counter(i,type:str)->int:
     return i
 
 # Lookup the location code by name
-def location_lookup(location: str) :
-    port_code = os.path.join(this_folder, '../port_code.txt')
-    with open(port_code, mode="r") as unloc:
-        dict_loc_code: dict = {k: v for k, v in (map(str, line.split(";")) for line in unloc)}
-        port_code: str = str(dict_loc_code.get(location)).strip()
-    yield port_code
-
-
-
-@lru_cache
+@cache
 def find_closest_location_code(query:str) -> str:
-    match = process.extractOne(query.title(), location_dict.location_dictionaries.keys())
-    return location_dict.location_dictionaries[match[0]]
+    match = process.extractOne(query.title(), location_mapping.location_dictionaries.keys())
+    return location_mapping.location_dictionaries[match[0]]
 
 
 
