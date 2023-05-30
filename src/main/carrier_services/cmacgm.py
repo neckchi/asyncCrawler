@@ -1,14 +1,12 @@
 from src.main.crawler_modal.async_crawler import *
 from src.main.carrier_services.helpers import order_counter,find_dictionaries_by_value,split_list_of_dicts
 from src.main.crawler_modal.csv_operation import FileManager
-from src.main.logger_factory.logger import LoggerFactory
 from src.main.schemas.service_loops import Services
 from src.main.schemas import settings
 import orjson #Orjson is built in RUST, its performing way better than python in built json
 import uuid
 import concurrent.futures
 import functools
-import time
 import csv
 import calendar
 
@@ -56,9 +54,7 @@ def cma_mapping(crawler_result: list,network_results:list,lookup_network:list, w
                     writer.writerow(pod.dict())
 async def cma_crawler():
     loop = asyncio.get_running_loop()
-    start = time.perf_counter()
     with FileManager(mode='w', scac=f'{carrier}') as writer:
-        logger.info(f'Created CSV header for {carrier}')
         all_services:set = set()
         for n in range(0, 700, 50):
             n = f"{n}-{n + 49}"
@@ -74,14 +70,9 @@ async def cma_crawler():
             )
             await service_network.run()
             all_services.add(*service_network.result)
-            services_seen = sorted(service_network.seen)
-            logger.info("Service Network Results:")
-            for url in services_seen:
-                logger.info(url)
-            logger.info(f"Service Network Crawled: {len(service_network.done)} URLs")
-            logger.info(f"Service Network Processed: {len(services_seen)} URLs")
+            service_network.logging_url(task_name='CMA CGM Service Network Group')
 
-        service_network_result = [{'service_code':data['code'],'service_name':data['name'],'departure_dat':data['departureDay'],'carriers':data['carriers']} for sn in all_services for data in orjson.loads(sn.read())]
+        service_network_result:list = [{'service_code':data['code'],'service_name':data['name'],'departure_dat':data['departureDay'],'carriers':data['carriers']} for sn in all_services for data in orjson.loads(sn.read())]
 
         service_routing = Crawler(
             crawler_type='API',
@@ -91,7 +82,7 @@ async def cma_crawler():
             specific_headers= {'range': '0-49',
             'KeyId': settings.cmdu_api_key.get_secret_value()},
             workers=5,
-            limit=10000000,
+            limit=100000,
         )
         await service_routing.run()
         service_routing_result:list = [orjson.loads(routing.read()) for routing in service_routing.result]
@@ -99,14 +90,5 @@ async def cma_crawler():
         # Using additional thread to speed up the entire processing for FileOperationIO task
         with concurrent.futures.ThreadPoolExecutor() as pool:
             result = await loop.run_in_executor(
-                pool, functools.partial(cma_mapping, crawler_result=service_routing_result,
-                                        network_results=service_routing.done,lookup_network = service_network_result, writer=writer))
-        services_routing_seen = sorted(service_routing.seen)
-        logger.info("Service Routing Results:")
-        for url in services_routing_seen:
-            logger.info(url)
-        logger.info(f"Service Routing Crawled: {len(service_routing.done)} URLs")
-        logger.info(f"Service Routing Processed: {len(services_routing_seen)} URLs")
-        logger.info(f"Anything pending?: {result}")
-        end = time.perf_counter()
-        logger.info(f"Done in {end - start:.2f}s")
+                pool, functools.partial(cma_mapping, crawler_result=service_routing_result, network_results=service_routing.done,lookup_network = service_network_result, writer=writer))
+        service_routing.logging_url(task_name='CMA CGM Service Routing')

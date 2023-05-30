@@ -3,7 +3,6 @@ from src.main.crawler_modal.csv_operation import FileManager
 from src.main.schemas.service_loops import Services
 from urllib.parse import urlparse
 from src.main.carrier_services.helpers import order_counter,find_closest_location_code
-from src.main.logger_factory.logger import LoggerFactory
 from src.main.mft_connections.sftp_connections import Sftp
 from src.main.schemas import settings
 import concurrent.futures
@@ -14,7 +13,7 @@ import time
 import csv
 
 carrier: str = 'cosu'
-logger = LoggerFactory.get_logger(__name__, log_level="INFO")
+
 def cosco_mapping(crawler_result: list, writer: csv.DictWriter):
     # File Operation IO tasks - sort out the file,do mapping based on csv schemas
     direction_lookup: dict = {'N': 'NORTHBOUND', 'S': 'SOUTHBOUND', 'E': 'EASTBOUND', 'W': 'WESTBOUND'}
@@ -64,7 +63,6 @@ async def cosco_crawler():
     loop = asyncio.get_running_loop()
     start = time.perf_counter()
     with FileManager(mode='w', scac=f'{carrier}') as writer:
-        logger.info(f'Created CSV header for {carrier}')
         # COSCO Service Groups
         service_groups = Crawler(
             crawler_type='API',
@@ -78,12 +76,7 @@ async def cosco_crawler():
                                  service_groups.result for data in
                                  orjson.loads(service_group.read())['data']['content']]
 
-        services_seen = sorted(service_groups.seen)
-        logger.info("Service Group Results:")
-        for url in services_seen:
-            logger.info(url)
-        logger.info(f"Service Group Crawled: {len(service_groups.done)} URLs")
-        logger.info(f"Service Group Processed: {len(services_seen)} URLs")
+        service_groups.logging_url(task_name='COSCO Service Groups')
 
         # COSCO Route Services
         route_services = Crawler(
@@ -101,12 +94,7 @@ async def cosco_crawler():
                                  route_services.result for data in
                                  orjson.loads(route_service.read())['data']['content']]
 
-        routes_seen = sorted(route_services.seen)
-        logger.info("Route Services Results:")
-        for url in routes_seen:
-            logger.info(url)
-        logger.info(f"Route Services Crawled: {len(route_services.done)} URLs")
-        logger.info(f"Route Services Processed: {len(routes_seen)} URLs")
+        route_services.logging_url(task_name='COSCO Route Services')
 
         # COSCO CALL PORTS
         call_ports = Crawler(
@@ -124,15 +112,9 @@ async def cosco_crawler():
             result = await loop.run_in_executor(
                 pool, functools.partial(cosco_mapping, crawler_result=call_ports.result, writer=writer))
 
-        call_port_seen = sorted(call_ports.seen)
-        logger.info("Call Ports Results:")
-        for url in call_port_seen:
-            logger.info(url)
-        logger.info(f"Call Ports Results Crawled: {len(call_ports.done)} URLs")
-        logger.info(f"Call Ports Results Processed: {len(call_port_seen)} URLs")
-        logger.info(f"Anything pending?: {result}")
-        end = time.perf_counter()
-        logger.info(f"Done in {end - start:.2f}s")
+        call_ports.logging_url(task_name='COSCO CALL PORTS')
+
+
 
     # # Connect KN SFTP
     # sftp = Sftp(

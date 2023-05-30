@@ -1,10 +1,8 @@
 from src.main.crawler_modal.async_crawler import *
 from src.main.crawler_modal.csv_operation import FileManager
 from src.main.schemas.service_loops import Services
-from src.main.logger_factory.logger import LoggerFactory
 from src.main.carrier_services.helpers import order_counter,find_dictionaries_by_value
 from src.main.schemas import settings
-import time
 import itertools
 import csv
 import uuid
@@ -82,9 +80,7 @@ def evergreen_mapping(crawler_result: list,network_results:list,lookup_network:l
 
 async def evergreen_crawler():
     loop = asyncio.get_running_loop()
-    start = time.perf_counter()
     with FileManager(mode = 'w',scac=f'{carrier}') as writer:
-        logger.info(f'Created CSV header for {carrier}')
         service_network = Crawler(
             crawler_type='Web',
             parent_element='td',
@@ -97,12 +93,7 @@ async def evergreen_crawler():
         await service_network.run()
         network_results: list = [service for service in service_network.result if str(service['a_link']).startswith('/tvs2/jsp/')]
 
-        services_seen = sorted(service_network.seen)
-        logger.info("Service Network Results:")
-        for url in services_seen:
-            logger.info(url)
-        logger.info(f"Service Network Crawled: {len(service_network.done)} URLs")
-        logger.info(f"Service Network Processed: {len(services_seen)} URLs")
+        service_network.logging_url(task_name='Evergreen Service Network')
 
         service_routing = Crawler(
             crawler_type='Web',
@@ -140,14 +131,5 @@ async def evergreen_crawler():
                 pool, functools.partial(evergreen_mapping, crawler_result=service_routing.result,network_results=service_routing.done,
                                         lookup_network=network_results,lookup_location = location_set, writer=writer))
 
-        services_routing_seen = sorted(service_routing.seen)
-        logger.info("Service Routing Results:")
-        for url in services_routing_seen:
-            logger.info(url)
-        logger.info(f"Service Routing Crawled: {len(service_routing.done)} URLs")
-        logger.info(f"Service Routing Processed: {len(services_routing_seen)} URLs")
-        logger.info(f"Anything pending?: {result}")
-        end = time.perf_counter()
-
-        logger.info(f"Done in {end - start:.2f}s")
+        service_routing.logging_url(task_name='Evergreen Service Routing')
 

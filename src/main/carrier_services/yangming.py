@@ -2,7 +2,6 @@ from src.main.crawler_modal.async_crawler import *
 from src.main.crawler_modal.csv_operation import FileManager
 from src.main.schemas import settings
 from src.main.schemas.service_loops import Services
-from src.main.logger_factory.logger import LoggerFactory
 from src.main.carrier_services.helpers import order_counter
 import asyncio
 import re
@@ -10,7 +9,6 @@ import itertools
 import datetime
 import calendar
 import csv
-import time
 import uuid
 import concurrent.futures
 import functools
@@ -62,7 +60,6 @@ def yangming_mapping(crawler_result: list,network_results:list, writer: csv.Dict
 
 async def yangming_crawler():
     loop = asyncio.get_running_loop()
-    start = time.perf_counter()
     with FileManager(mode='w', scac=f'{carrier}') as writer:
         logger.info(f'Created CSV header for {carrier}')
         service_network = Crawler(
@@ -82,12 +79,7 @@ async def yangming_crawler():
         service_directions:list = list(itertools.product(service_network_results,['W','S','E','N']))
         service_direction_url:list = [settings.ymlu_route_url.format(service=srs[0],direction=srs[1]) for srs in service_directions]
 
-        services_seen = sorted(service_network.seen)
-        logger.info("Service Network Results:")
-        for url in services_seen:
-            logger.info(url)
-        logger.info(f"Service Network Crawled: {len(service_network.done)} URLs")
-        logger.info(f"Service Network Processed: {len(services_seen)} URLs")
+        service_network.logging_url(task_name='YangMing Service Network')
 
         service_routing = Crawler(
             crawler_type='Web',
@@ -107,13 +99,4 @@ async def yangming_crawler():
             result = await loop.run_in_executor(
                 pool, functools.partial(yangming_mapping, crawler_result=service_routing.result,network_results=service_routing.done, writer=writer))
 
-        services_routing_seen = sorted(service_routing.seen)
-        logger.info("Service Routing Results:")
-        for url in services_routing_seen:
-            logger.info(url)
-        logger.info(f"Service Routing Crawled: {len(service_routing.done)} URLs")
-        logger.info(f"Service Routing Processed: {len(services_routing_seen)} URLs")
-        logger.info(f"Anything pending?: {result}")
-        end = time.perf_counter()
-
-        logger.info(f"Done in {end - start:.2f}s")
+        service_routing.logging_url(task_name='YangMing Service Routing')
