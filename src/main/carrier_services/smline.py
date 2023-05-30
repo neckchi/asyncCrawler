@@ -55,10 +55,10 @@ async def smline_crawler():
         service_network = Crawler(
             crawler_type='API',
             method='GET',
-            sleep=None,
+            sleep=5,
             urls=[settings.smlm_service_url.format(network = network_code) for network_code in ['AA','MN']],
             specific_headers=extra_header,
-            workers=5,
+            workers=3,
             limit=100,
         )
         await service_network.run()
@@ -72,7 +72,7 @@ async def smline_crawler():
         service_routing = Crawler(
             crawler_type='API',
             method='GET',
-            sleep=3,
+            sleep=6,
             urls=service_routing_urls,
             specific_headers=extra_header,
             workers=5,

@@ -102,7 +102,7 @@ async def evergreen_crawler():
             next_element='td',
             urls=[settings.eglv_route_url.format(result['a_link']) for result in network_results],
             sleep=4,
-            workers=5,
+            workers=3,
             limit=5000,
         )
         await service_routing.run()
@@ -112,9 +112,9 @@ async def evergreen_crawler():
         call_location_code = Crawler(
             crawler_type='API',
             method='GET',
-            sleep=1,
+            sleep=4,
             urls=[settings.eglv_location_url.format(port=loc_name) for loc_name in location_name],
-            workers=5,
+            workers=3,
             limit=20000,
         )
 

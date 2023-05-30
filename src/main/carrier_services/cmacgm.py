@@ -61,7 +61,7 @@ async def cma_crawler():
             service_network = Crawler(
                 crawler_type='API',
                 method='GET',
-                sleep=2,
+                sleep=3,
                 urls=[settings.cmdu_service_url],
                 specific_headers= {'range': n,
                 'KeyId': settings.cmdu_api_key.get_secret_value()},

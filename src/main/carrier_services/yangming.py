@@ -68,7 +68,7 @@ async def yangming_crawler():
             html_id=["ContentPlaceHolder1_ddlSearchName"],
             next_element='option',
             urls=[settings.ymlu_service_url],
-            workers=5,
+            workers=3,
             limit=100,
         )
         await service_network.run()
@@ -88,7 +88,7 @@ async def yangming_crawler():
             next_element='td',
             sleep=5,
             urls=service_direction_url,
-            workers=5,
+            workers=3,
             limit=10,
         )
 

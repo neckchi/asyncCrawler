@@ -68,7 +68,7 @@ async def cosco_crawler():
             crawler_type='API',
             sleep=None,
             urls=[settings.cosu_service_url.format(i) for i in range(11, 19)],
-            workers=5,
+            workers=3,
             limit=5100,
         )
         await service_groups.run()
@@ -81,11 +81,11 @@ async def cosco_crawler():
         # COSCO Route Services
         route_services = Crawler(
             crawler_type='API',
-            sleep=3,
+            sleep=4,
             urls=[settings.cosu_route_url.format(
                 next(iter(rs.keys())))
                 for rs in service_groups_result],
-            workers=5,
+            workers=3,
             limit=5100,
         )
         await route_services.run()
@@ -99,10 +99,10 @@ async def cosco_crawler():
         # COSCO CALL PORTS
         call_ports = Crawler(
             crawler_type='API',
-            sleep=3,
+            sleep=4,
             urls=[settings.cosu_ports_url.format(next(iter(cp.keys())))
                   for cp in route_services_result],
-            workers=5,
+            workers=3,
             limit=5100,
         )
         await call_ports.run()

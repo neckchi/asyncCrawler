@@ -8,7 +8,7 @@ if __name__ == '__main__':
         # services_run = await asyncio.gather(hyundai.hyundai_crawler(),cosco.cosco_crawler(),yangming.yangming_crawler(),evergreen.evergreen_crawler(),cmacgm.cma_crawler())
 
         #testing
-        services_run = await asyncio.gather(smline.smline_crawler())
+        services_run = await asyncio.gather(hyundai.hyundai_crawler())
         return services_run
 
     asyncio.get_event_loop().run_until_complete(main())

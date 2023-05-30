@@ -6,7 +6,6 @@ from src.main.crawler_modal import browser_headers
 from src.main.logger_factory.logger import LoggerFactory
 import asyncio
 import httpx
-import time
 
 
 
@@ -43,7 +42,7 @@ class Crawler():
         self.done: list = list()
         self.result: list = list()
         self.filter_url = filter_url
-        self.num_workers:int = workers
+        self.num_workers:int = workers #Limit the total number of connection
         self.limit: int = limit
         self.total: int = 0
 
@@ -76,7 +75,6 @@ class Crawler():
         if retries == 0:
             raise PermissionError
         else:
-
             self.todo.task_done()
 
     async def crawl(self, url: str):
@@ -132,12 +130,10 @@ class Crawler():
     def logging_url(self,task_name:str):
         logger = LoggerFactory.get_logger(__name__, log_level="INFO")
         logger.info(f'Created Async Crawler Tasks for {task_name}')
-        start = time.perf_counter()
+
         services_seen = sorted(self.seen)
         logger.info("Service Group Results:")
         for url in services_seen:
             logger.info(url)
         logger.info(f"Service Group Crawled: {len(self.done)} URLs")
         logger.info(f"Service Group Processed: {len(services_seen)} URLs")
-        end = time.perf_counter()
-        logger.info(f"Done in {end - start:.2f}s")
