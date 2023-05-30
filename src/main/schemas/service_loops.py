@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     cmdu_service_url:str
     cmdu_api_key:SecretStr
     cmdu_route_url:str
+    smlm_service_url:str
+    smlm_route_url:str
+    smlm_host:str
+    smlm_origin:str
+    smlm_referer:str
 
     class Config:
         env_file = ".env"

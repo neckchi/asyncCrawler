@@ -1,8 +1,8 @@
 from typing import Callable, Iterable,Literal,Type
 from bs4 import BeautifulSoup
 from random import randint
-from src.main.crawler_modal import browser_headers
 from urllib.parse import urlparse,parse_qs
+from src.main.crawler_modal import browser_headers
 from src.main.logger_factory.logger import LoggerFactory
 import asyncio
 import httpx
