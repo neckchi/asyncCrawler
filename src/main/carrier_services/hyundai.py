@@ -13,16 +13,6 @@ import csv
 
 carrier: str = 'hdmu'
 logger = LoggerFactory.get_logger(__name__, log_level="INFO")
-
-# def find_dictionaries_by_values(lst:list,key:str,value:str) ->dict:
-#     result:list = []
-#     for d in lst:
-#         if d.get(key) == value:
-#             etd = calendar.day_abbr[datetime.strptime(d['etdDt'], '%Y%m%d%H%M').weekday()]
-#             eta = calendar.day_abbr[datetime.strptime(d['etbDt'], '%Y%m%d%H%M').weekday()]
-#             result.append({'etd':etd,'eta':eta})
-#     return result[-1]
-
 def hyundai_mapping(crawler_result: list,network_results:list,lookup_network:list, writer: csv.DictWriter):
 
     for service_url, service_route in zip(network_results, crawler_result):
