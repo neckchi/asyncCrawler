@@ -83,6 +83,7 @@ async def evergreen_crawler():
     with FileManager(mode = 'w',scac=f'{carrier}') as writer:
         service_network = Crawler(
             crawler_type='Web',
+            method='GET',
             parent_element='td',
             html_class=["f12rown1"],
             next_element='ahref',
@@ -97,6 +98,7 @@ async def evergreen_crawler():
 
         service_routing = Crawler(
             crawler_type='Web',
+            method='GET',
             parent_element='td',
             html_class=["f09tilb1", "f09rown2"],
             next_element='td',
@@ -107,7 +109,7 @@ async def evergreen_crawler():
         )
         await service_routing.run()
 
-        location_name:set = set(itertools.chain(*[itertools.takewhile(lambda x: x != 'ETA', loc[ep + 1::])for loc in service_routing.result for ep in check_extended(loc, loc[0])]))
+        location_name:set = set(itertools.chain(*[itertools.takewhile(lambda x: x != 'ETA', loc[ep + 1::])for loc in service_routing.result for ep in check_extended(service_list=loc, element=loc[0])]))
 
         call_location_code = Crawler(
             crawler_type='API',

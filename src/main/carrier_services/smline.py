@@ -17,7 +17,7 @@ def smline_mapping(crawler_result: list,network_results:list,lookup_network:list
         service_code:str = service.split('vsl_slan_cd=',1)[1]
         service_name:str = find_dictionaries_by_value(lst = lookup_network,key='service_code',value=service_code)[0].get('service_name')
         routing_list:list = orjson.loads(routing.text)['list']
-        routing_direction = split_list_of_dicts(lst=routing_list,key='skdDirCd')
+        routing_direction:dict = split_list_of_dicts(lst=routing_list,key='skdDirCd')
         for direction_code,rotation_list in routing_direction.items():
             direction_lookup: dict = {'N': 'NORTHBOUND', 'S': 'SOUTHBOUND', 'E': 'EASTBOUND', 'W': 'WESTBOUND'}
             direction:str = direction_lookup.get(direction_code, 'UNKNOWN')

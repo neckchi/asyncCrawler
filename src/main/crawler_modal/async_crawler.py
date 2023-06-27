@@ -15,7 +15,7 @@ class Crawler():
         random_index = randint(0, len(header_list) - 1)
         return header_list[random_index]
 
-    def __init__(self, urls: Iterable[str],crawler_type = Literal['API','WEB'] ,method = Literal['GET','POST'],
+    def __init__(self, urls: Iterable[str],crawler_type = Literal['API','Web'] ,method = Literal['GET','POST'],
                  specific_headers: dict | None = None,
                  parent_element:str|None = None,html_class:list|None= None,
                  html_id:list|None= None,next_element:str |None = None,
@@ -26,6 +26,7 @@ class Crawler():
 
         timeout = httpx.Timeout(50.0, read=None, connect=60.0)
         limits = httpx.Limits(max_keepalive_connections=60, max_connections=None)
+
         self.type: Type[str] = crawler_type
         self.specific_headers:dict|None = specific_headers
         self.client: httpx.AsyncClient = httpx.AsyncClient(verify=False, timeout=timeout, limits=limits)
@@ -86,12 +87,13 @@ class Crawler():
             await asyncio.sleep(self.sleep_dllm)
 
         if self.method == 'GET':
-            response = await self.client.get(url=url,headers=dict(headers,**self.specific_headers) if self.specific_headers is not None else headers,follow_redirects=True)
+            response = await self.client.get(url=url,headers= headers | self.specific_headers if self.specific_headers is not None else headers,follow_redirects=True)
         else:
             parsed_url  = urlparse(url)
             base_url = f'{parsed_url.scheme}://{parsed_url.netloc}{parsed_url.path}'
             body_data:dict|None = {key: value[0] for key,value in parse_qs(parsed_url.query).items()} if parsed_url.query else None
-            response = await self.client.post(url=base_url,headers=dict(headers,**self.specific_headers)  if self.specific_headers is not None else headers,json = body_data,follow_redirects=True)
+            response = await self.client.post(url=base_url,headers=headers| self.specific_headers if self.specific_headers is not None else headers,json = body_data,follow_redirects=True)
+
         found_links = await self.parse_links(base_url=url,response=response)
         await self.on_found_links(found_links)
         self.done.append(url)
@@ -108,7 +110,8 @@ class Crawler():
                     text = service.findNext('a').text
                     self.result.append({'a_link':link,'a_text':text})
             elif self.element in ('td','option'):
-                self.result.append([service.text.strip() for service in parsed_soup if '-----' not in service.text])
+                # self.result.append([service.text.strip() for service in parsed_soup if '-----' not in service.text])
+                self.result.append([service.text.strip() for service in parsed_soup])
             else:self.result.append(parsed_soup)
         self.found_links.add(base_url)
         return self.found_links

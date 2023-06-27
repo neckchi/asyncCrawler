@@ -13,7 +13,7 @@ import calendar
 carrier: str = 'cmdu'
 logger = LoggerFactory.get_logger(__name__, log_level="INFO")
 def cma_mapping(crawler_result: list,network_results:list,lookup_network:list, writer: csv.DictWriter):
-    carrier_code:dict = {'0001': 'CMDU', '0002': 'ANLC', '0011': 'CHNL', '0015': 'APLU'}
+    carrier_code:dict = {'0001': 'CMDU', '0002': 'ANNU','0011': 'CHNL', '0014': 'CSFU', '0015': 'APLU'}
     direction_dict:dict = {'NORTH': 'NORTHBOUND', 'SOUTH': 'SOUTHBOUND', 'EAST': 'EASTBOUND',
                       'WEST': 'WESTBOUND','ROUND':'ROUND'}
     for url,routing in zip(network_results,crawler_result):
@@ -61,27 +61,29 @@ async def cma_crawler():
             service_network = Crawler(
                 crawler_type='API',
                 method='GET',
-                sleep=3,
+                sleep=1,
                 urls=[settings.cmdu_service_url],
-                specific_headers= {'range': n,
-                'KeyId': settings.cmdu_api_key.get_secret_value()},
-                workers=5,
+                specific_headers= {'range': n,'KeyId': settings.cmdu_api_key.get_secret_value()},
+                workers=4,
                 limit=10000,
             )
             await service_network.run()
-            all_services.add(*service_network.result)
+            for service in service_network.result:
+                if service.status_code in (200,206):
+                    all_services.add(service)
+            # all_services.add(*service_network.result)
             service_network.logging_url(task_name='CMA CGM Service Network Group')
-
         service_network_result:list = [{'service_code':data['code'],'service_name':data['name'],'departure_dat':data['departureDay'],'carriers':data['carriers']} for sn in all_services for data in orjson.loads(sn.read())]
+
+
 
         service_routing = Crawler(
             crawler_type='API',
             method='GET',
-            sleep=2,
+            sleep=1,
             urls=[settings.cmdu_route_url.format(loop=network['service_code']) for network in service_network_result],
-            specific_headers= {'range': '0-49',
-            'KeyId': settings.cmdu_api_key.get_secret_value()},
-            workers=5,
+            specific_headers= {'range': '0-49','KeyId': settings.cmdu_api_key.get_secret_value()},
+            workers=6,
             limit=100000,
         )
         await service_routing.run()
