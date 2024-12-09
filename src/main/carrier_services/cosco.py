@@ -2,28 +2,33 @@ from src.main.crawler_modal.async_crawler import *
 from src.main.crawler_modal.csv_operation import FileManager
 from src.main.schemas.service_loops import Services
 from urllib.parse import urlparse
-from src.main.carrier_services.helpers import order_counter,find_closest_location_code
+from src.main.carrier_services.helpers import order_counter, find_closest_location_code
 from src.main.mft_connections.sftp_connections import Sftp
 from src.main.schemas import settings
 import concurrent.futures
 import functools
 import uuid
-import orjson #Orjson is built in C, its performing way better than python built in json
+import orjson  # Orjson is built in C, its performing way better than python built in json
 import time
 import csv
 
 carrier: str = 'cosu'
 
+
 def cosco_mapping(crawler_result: list, writer: csv.DictWriter):
     # File Operation IO tasks - sort out the file,do mapping based on csv schemas
-    direction_lookup: dict = {'N': 'NORTHBOUND', 'S': 'SOUTHBOUND', 'E': 'EASTBOUND', 'W': 'WESTBOUND'}
+    direction_lookup: dict = {
+        'N': 'NORTHBOUND', 'S': 'SOUTHBOUND', 'E': 'EASTBOUND', 'W': 'WESTBOUND'}
     for call_port in crawler_result:
-        service_code: str = urlparse(str(call_port.url)).path[31:].split('.do')[0]
+        service_code: str = urlparse(
+            str(call_port.url)).path[31:].split('.do')[0]
         for data in orjson.loads(call_port.read())['data']['content']:
-            direction_code: str | None = str(data.get('direction', 'U'))[0].strip()
+            direction_code: str | None = str(
+                data.get('direction', 'U'))[0].strip()
             direction: str = direction_lookup.get(direction_code, 'UNKNOWN')
             for port_sequence, ports in enumerate(data['ports'], start=0):
-                port_name: str = str(ports.get('callPort')).upper().replace(' ', '')
+                port_name: str = str(ports.get('callPort')
+                                     ).upper().replace(' ', '')
                 etd_day: str | None = str(ports.get('callPortEtd')).upper().strip() if str(
                     ports.get('callPortEtd')).isalpha() else str(ports.get('callPortEtdTime')).upper().strip()
                 etd_time: str | None = ports.get('callPortEtdTime') if str(
@@ -44,19 +49,22 @@ def cosco_mapping(crawler_result: list, writer: csv.DictWriter):
                                 'relatedID': uuid.uuid5(uuid.NAMESPACE_DNS, f'{carrier.upper()}-{service_code}-{direction}')}
                 if ports.get('callPortEtaTime') is not None:
                     pol: Services = Services(**common,
-                                             startDay=eta_day.replace('TEU', 'THU').replace('WES', 'WED').replace('NONE', etd_day),
+                                             startDay=eta_day.replace('TEU', 'THU').replace(
+                                                 'WES', 'WED').replace('NONE', etd_day),
                                              tt=eta_time if eta_time.isnumeric() else 5,
-                                             order=order_counter(port_sequence, 'L'),
+                                             order=order_counter(
+                                                 port_sequence, 'L'),
                                              locationType='L')
-                    writer.writerow(pol.dict())
+                    writer.writerow(pol.model_dump())
                 if ports.get('callPortEtdTime') is not None:
                     pod: Services = Services(**common,
-                                             startDay=etd_day.replace('TEU', 'THU').replace('WES', 'WED').replace('NONE', eta_day),
+                                             startDay=etd_day.replace('TEU', 'THU').replace(
+                                                 'WES', 'WED').replace('NONE', eta_day),
                                              tt=etd_time,
-                                             order=order_counter(port_sequence, 'D'),
+                                             order=order_counter(
+                                                 port_sequence, 'D'),
                                              locationType='D')
-                    writer.writerow(pod.dict())
-
+                    writer.writerow(pod.model_dump())
 
 
 async def cosco_crawler():
@@ -113,8 +121,6 @@ async def cosco_crawler():
                 pool, functools.partial(cosco_mapping, crawler_result=call_ports.result, writer=writer))
 
         call_ports.logging_url(task_name='COSCO CALL PORTS')
-
-
 
     # # Connect KN SFTP
     # sftp = Sftp(

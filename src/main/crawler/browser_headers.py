@@ -1,4 +1,4 @@
-headers_list:list[dict] =  [
+headers_list: list[dict] = [
     {
         # Header 1: Chrome on Windows
         "upgrade-insecure-requests": "1",
